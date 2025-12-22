@@ -3,12 +3,12 @@ import Image from 'next/image';
 const doctors = [
     {
         name: 'Dr. Melati Wati',
-        role: 'Dokter Puskesmas',
+        role: 'Bidan ',
         image: '/doctor-2.png',
     },
     {
         name: 'Heema Rasana',
-        role: 'Bidan Posyandu',
+        role: 'Dokter Bedah',
         image: '/doctor-3.png', // Using the glasses one for variety as "male nurse/bidan" placeholder or similar
     },
     {

@@ -47,10 +47,6 @@ export default function Hero() {
 
             {/* Floating Badge */}
             <div className="absolute bottom-10 right-0 bg-white p-2 rounded-lg shadow-lg z-20 flex items-center gap-2 animate-bounce">
-              <span className="text-blue-500">🛡️</span>
-              <span className="text-xs font-bold text-gray-700">
-                Wilayah 3T
-              </span>
             </div>
           </div>
         </div>

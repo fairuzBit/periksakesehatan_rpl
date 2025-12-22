@@ -23,37 +23,39 @@ export default function LoginPage() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
+        e.preventDefault();
+        setLoading(true);
+        setError('');
 
-    try {
-      // NOTE: This part strictly follows existing logic structure
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: formData.email,
-          nik: isAdmin ? undefined : formData.nik,
-          password: formData.password,
-          role: isAdmin ? "admin" : "patient"
-        }),
-      });
+        try {
+            const res = await fetch('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: formData.email, password: formData.password }),
+            });
 
-      const data = await res.json();
+            const data = await res.json();
 
-      if (res.ok) {
-        router.push(isAdmin ? "/admin" : "/");
-      } else {
-        setError(data.message || "Login failed");
-      }
-    } catch (err) {
-      console.error(err);
-      setError("Something went wrong");
-    } finally {
-      setLoading(false);
-    }
-  };
+            if (res.ok) {
+                // 1. Simpan Data User
+                localStorage.setItem('user', JSON.stringify(data.user));
+                
+                // 2. CEK ROLE & REDIRECT (Disini kuncinya)
+                if (data.user.role === 'ADMIN') {
+                    router.push('/admin/dashboard'); // Admin ke Dashboard Admin
+                } else {
+                    router.push('/dashboard');       // Pasien ke Dashboard Pasien
+                }
+            } else {
+                setError(data.message || 'Login gagal');
+            }
+        } catch (err) {
+            console.error(err);
+            setError('Terjadi kesalahan sistem');
+        } finally {
+            setLoading(false);
+        }
+    };
 
 
   return (
@@ -63,7 +65,7 @@ export default function LoginPage() {
         className={`hidden lg:flex w-1/2 relative flex-col justify-center items-center overflow-hidden transition-colors duration-500 ease-in-out ${isAdmin ? "bg-slate-500" : "bg-blue-400"
           }`}
       >
-        <div className={`absolute top-0 w-full h-full ${isAdmin ? "bg-slate-500" : "bg-blue-400"} transition-colors duration-500`} >
+        <div className={`absolute top-0 w-full h-full ${isAdmin ? "bg-blue-400" : "bg-blue-400"} transition-colors duration-500`} >
           {/* Shapes */}
           <div className="absolute top-[-10%] left-[-10%] w-64 h-64 bg-white/10 rounded-full" />
           <div className="absolute bottom-[-10%] right-[-10%] w-96 h-96 bg-white/10 rounded-full" />
@@ -82,7 +84,7 @@ export default function LoginPage() {
 
         <div className="z-10 relative w-[80%] h-[60%]">
           <Image
-            src={isAdmin ? "/doctor-1.png" : "/login-illustration.png"}
+            src={isAdmin ? "/admin-doctor-animated.png" : "/login-illustration.png"}
             alt="Doctor Illustration"
             fill
             className="object-contain"
@@ -94,7 +96,7 @@ export default function LoginPage() {
       {/* Right Side */}
       <div className="flex-1 flex flex-col justify-center px-8 md:px-16 lg:px-24 bg-white relative">
         <button
-          onClick={() => router.push("/")}
+          onClick={() => isAdmin ? setIsAdmin(false) : router.push("/")}
           className="absolute top-6 right-6 text-gray-500 hover:text-gray-700"
         >
           <span className="text-2xl">×</span>

@@ -68,11 +68,17 @@ export default function Navbar() {
             {user ? (
               <div className="flex items-center gap-4 pl-6 border-l border-gray-200">
                 <div className="text-right hidden lg:block">
+                  {/* Tampilkan Nama User */}
                   <p className="text-sm font-bold text-gray-900 leading-tight">
                     {user.name}
                   </p>
+
+                  {/* Tampilkan Role / Jabatan */}
                   <p className="text-[10px] uppercase font-bold text-blue-600 tracking-wider">
-                    {user.role === "ADMIN" ? "Administrator" : "Pasien"}
+                    {/* Logic yang diperbaiki: Cek case-insensitive */}
+                    {user.role && user.role.toUpperCase() === "ADMIN"
+                      ? "Administrator"
+                      : "Pasien Umum"}
                   </p>
                 </div>
 

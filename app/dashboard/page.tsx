@@ -7,25 +7,23 @@ import Footer from "@/components/Footer";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Activity, QrCode, Calendar, ArrowRight } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
-  const [checkups, setCheckups] = useState<any[]>([]); // Menyimpan data asli
+  const [checkups, setCheckups] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 1. Cek User Login
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
       const userData = JSON.parse(storedUser);
 
-      // Proteksi: Admin dilarang masuk sini
       if (userData.role === "ADMIN") {
         router.push("/admin/dashboard");
       } else {
         setUser(userData);
-        // 2. Ambil Data Riwayat (Panggil fungsi fetch)
         fetchHistory(userData.id);
       }
     } else {
@@ -35,14 +33,15 @@ export default function DashboardPage() {
 
   const fetchHistory = async (userId: number) => {
     try {
-      // --- PERBAIKAN DISINI ---
-      // Sebelumnya: /api/checkup/history (Salah Alamat)
-      // Sekarang: /api/history (Sesuai nama file route.ts bos)
-      const res = await fetch(`/api/history?userId=${userId}`);
+      // Query langsung ke Supabase
+      const { data: history, error } = await supabase
+        .from("HealthCheckup")
+        .select("*")
+        .eq("userId", userId)
+        .order("createdAt", { ascending: false });
 
-      const data = await res.json();
-      if (res.ok) {
-        setCheckups(data.data);
+      if (!error && history) {
+        setCheckups(history);
       }
     } catch (err) {
       console.error("Error fetch history:", err);
@@ -59,7 +58,6 @@ export default function DashboardPage() {
     );
   if (!user) return null;
 
-  // Data Paling Baru (Index 0)
   const latest = checkups.length > 0 ? checkups[0] : null;
 
   return (
@@ -91,7 +89,6 @@ export default function DashboardPage() {
           {/* KIRI: Kartu Identitas Digital */}
           <div className="lg:col-span-1 space-y-6">
             <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-6 text-white shadow-xl relative overflow-hidden">
-              {/* Hiasan Background */}
               <div className="absolute top-0 right-0 w-40 h-40 bg-white/10 rounded-full -mr-10 -mt-10 blur-2xl"></div>
 
               <div className="relative z-10">
@@ -205,13 +202,12 @@ export default function DashboardPage() {
                     >
                       <div className="flex items-start gap-4">
                         <div
-                          className={`p-3 rounded-full mt-1 ${
-                            item.status.includes("BAHAYA")
+                          className={`p-3 rounded-full mt-1 ${item.status.includes("BAHAYA")
                               ? "bg-red-100 text-red-600"
                               : item.status.includes("WASPADA")
-                              ? "bg-yellow-100 text-yellow-600"
-                              : "bg-green-100 text-green-600"
-                          }`}
+                                ? "bg-yellow-100 text-yellow-600"
+                                : "bg-green-100 text-green-600"
+                            }`}
                         >
                           <Activity size={20} />
                         </div>
@@ -240,19 +236,18 @@ export default function DashboardPage() {
 
                       <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto pl-14 sm:pl-0">
                         <span
-                          className={`px-3 py-1 rounded-full text-xs font-bold border ${
-                            item.status.includes("BAHAYA")
+                          className={`px-3 py-1 rounded-full text-xs font-bold border ${item.status.includes("BAHAYA")
                               ? "bg-red-50 text-red-700 border-red-100"
                               : item.status.includes("WASPADA")
-                              ? "bg-yellow-50 text-yellow-700 border-yellow-100"
-                              : "bg-green-50 text-green-700 border-green-100"
-                          }`}
+                                ? "bg-yellow-50 text-yellow-700 border-yellow-100"
+                                : "bg-green-50 text-green-700 border-green-100"
+                            }`}
                         >
                           {item.status.includes("BAHAYA")
                             ? "BAHAYA"
                             : item.status.includes("WASPADA")
-                            ? "WASPADA"
-                            : "SEHAT"}
+                              ? "WASPADA"
+                              : "SEHAT"}
                         </span>
                         <ArrowRight
                           size={18}

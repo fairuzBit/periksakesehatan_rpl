@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { useRouter } from "next/navigation"; // Tambah router untuk redirect jika belum login
+import { useRouter } from "next/navigation";
 import {
   Activity,
   Heart,
@@ -13,14 +13,14 @@ import {
   Droplet,
   Ruler,
   Calendar,
-  ArrowRight,
 } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 export default function PeriksaPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [user, setUser] = useState<any>(null); // State untuk menyimpan data User Login
-  const [history, setHistory] = useState<any[]>([]); // State untuk menyimpan Riwayat Asli
+  const [user, setUser] = useState<any>(null);
+  const [history, setHistory] = useState<any[]>([]);
 
   const [result, setResult] = useState<null | {
     status: string;
@@ -35,7 +35,6 @@ export default function PeriksaPage() {
     height: "165",
   });
 
-  // 1. SAAT HALAMAN DIBUKA: Cek Login & Ambil Riwayat
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (!storedUser) {
@@ -46,17 +45,19 @@ export default function PeriksaPage() {
 
     const userData = JSON.parse(storedUser);
     setUser(userData);
-    fetchHistory(userData.id); // Panggil fungsi ambil data
+    fetchHistory(userData.id);
   }, [router]);
 
-  // Fungsi: Ambil Data Riwayat dari Database
   const fetchHistory = async (userId: number) => {
     try {
-      // Sesuaikan path ini dengan file: app/api/history/route.ts
-      const res = await fetch(`/api/history?userId=${userId}`);
-      const data = await res.json();
-      if (res.ok) {
-        setHistory(data.data);
+      const { data: historyData, error } = await supabase
+        .from("HealthCheckup")
+        .select("*")
+        .eq("userId", userId)
+        .order("createdAt", { ascending: false });
+
+      if (!error && historyData) {
+        setHistory(historyData);
       }
     } catch (err) {
       console.error("Gagal ambil riwayat", err);
@@ -69,11 +70,10 @@ export default function PeriksaPage() {
 
   const analyzeHealth = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user) return; // Cegah jika user belum terload
+    if (!user) return;
 
     setLoading(true);
 
-    // Konversi Data
     const sys = parseInt(formData.systolic) || 0;
     const dia = parseInt(formData.diastolic) || 0;
     const sugar = parseInt(formData.bloodSugar) || 0;
@@ -83,7 +83,6 @@ export default function PeriksaPage() {
     let problems: string[] = [];
     let severity = 0;
 
-    // --- LOGIKA ANALISA ---
     if (sys >= 140 || dia >= 90) {
       problems.push("⚠️ Tekanan Darah Tinggi (Hipertensi)");
       severity = Math.max(severity, 2);
@@ -137,24 +136,23 @@ export default function PeriksaPage() {
 
     setResult({ status, color, notes: finalNotes });
 
-    // --- PERBAIKAN: SIMPAN KE API CREATE YANG BENAR ---
+    // Simpan langsung ke Supabase
     try {
-      // Pastikan path ini sesuai file: app/api/create/route.ts
-      const response = await fetch("/api/create", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...formData,
-          status,
-          notes: finalNotes.join(". "),
-          userId: user.id, // Gunakan ID user asli, BUKAN angka 1
-        }),
+      const { error } = await supabase.from("HealthCheckup").insert({
+        systolic: Number(formData.systolic),
+        diastolic: Number(formData.diastolic),
+        bloodSugar: Number(formData.bloodSugar) || 0,
+        weight: Number(formData.weight) || 0,
+        height: Number(formData.height) || 0,
+        status: status,
+        notes: finalNotes.join(". "),
+        userId: user.id,
       });
 
-      if (response.ok) {
-        // Jika sukses simpan, refresh riwayat agar data baru langsung muncul
+      if (!error) {
         fetchHistory(user.id);
       } else {
+        console.error("Insert Error:", error);
         alert("Gagal menyimpan data ke database");
       }
     } catch (err) {
@@ -379,7 +377,7 @@ export default function PeriksaPage() {
                 )}
               </div>
 
-              {/* Box Riwayat Pemeriksaan (SUDAH REAL DATA) */}
+              {/* Box Riwayat Pemeriksaan */}
               <div className="bg-white border border-gray-200 rounded-xl p-6 shadow-sm overflow-hidden">
                 <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2 border-b pb-2">
                   <Activity size={20} className="text-blue-500" /> Riwayat Anda
@@ -404,19 +402,18 @@ export default function PeriksaPage() {
                             )}
                           </span>
                           <span
-                            className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded ${
-                              item.status.includes("BAHAYA")
+                            className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded ${item.status.includes("BAHAYA")
                                 ? "bg-red-100 text-red-600"
                                 : item.status.includes("WASPADA")
-                                ? "bg-yellow-100 text-yellow-600"
-                                : "bg-green-100 text-green-600"
-                            }`}
+                                  ? "bg-yellow-100 text-yellow-600"
+                                  : "bg-green-100 text-green-600"
+                              }`}
                           >
                             {item.status.includes("BAHAYA")
                               ? "Bahaya"
                               : item.status.includes("WASPADA")
-                              ? "Waspada"
-                              : "Sehat"}
+                                ? "Waspada"
+                                : "Sehat"}
                           </span>
                         </div>
                         <div className="text-sm text-gray-700 space-y-1">
